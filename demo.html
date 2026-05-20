@@ -1,0 +1,1060 @@
+#!/usr/bin/env pwsh
+# scaffold-pulsesense.ps1
+#
+# Self-contained scaffold for the PulseSense launch kit:
+#   1. intro.html         — 35-second animated promo (CSS + JS + SVG inline).
+#   2. build_pitch_deck.py — Guy Kawasaki 10/20/30 pitch deck generator.
+#   3. (optional) PulseSense_Pitch_10_20_30.pptx if -BuildDeck is passed.
+#
+# Usage:
+#   pwsh ./scaffold-pulsesense.ps1                           # writes both files in CWD
+#   pwsh ./scaffold-pulsesense.ps1 -OutDir dist              # custom output dir
+#   pwsh ./scaffold-pulsesense.ps1 -BuildDeck                # also runs python to build pptx
+#   pwsh ./scaffold-pulsesense.ps1 -Open                     # open intro.html in default browser
+#   pwsh ./scaffold-pulsesense.ps1 -Serve [-Port 5600]       # serve OutDir over python http.server
+#
+# Requirements:
+#   - PowerShell 5+ (Windows PowerShell or pwsh)
+#   - Python 3 only when using -BuildDeck or -Serve (python-pptx auto-installed for -BuildDeck)
+
+[CmdletBinding()]
+param(
+    [string]$OutDir   = '.',
+    [string]$IntroFile = 'intro.html',
+    [string]$DeckFile = 'build_pitch_deck.py',
+    [string]$DeckOut  = 'PulseSense_Pitch_10_20_30.pptx',
+    [switch]$BuildDeck,
+    [switch]$Open,
+    [switch]$Serve,
+    [int]$Port = 5600
+)
+
+$ErrorActionPreference = 'Stop'
+
+if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Path $OutDir -Force | Out-Null }
+$OutDirAbs = (Resolve-Path $OutDir).Path
+
+function Write-Utf8NoBom([string]$Path, [string]$Content) {
+    $enc = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($Path, $Content, $enc)
+}
+
+$introPath = Join-Path $OutDirAbs $IntroFile
+$deckPath  = Join-Path $OutDirAbs $DeckFile
+$pptxPath  = Join-Path $OutDirAbs $DeckOut
+
+$html = @'
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, initial-scale=1" />
+  <title>PulseSense â€” Intro</title>
+  <style>
+    /* ============================================================
+       PulseSense intro â€” 35-second auto-playing promo.
+       Designed to be screen-recorded at 1920x1080.
+       Each .scene fades in/out on its own timeline using CSS
+       animations driven from a shared timeline triggered by `body.play`.
+       ============================================================ */
+    :root {
+      --bg: #0a1820;
+      --bg-2: #0f2530;
+      --surface: #122c38;
+      --text: #eef6f5;
+      --muted: #a4c2c0;
+      --accent: #8eea7d;
+      --accent-2: #ff6b70;
+      --warn: #ffb454;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .stage {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(1200px 700px at 12% 10%, #1b3e57 0%, transparent 60%),
+        radial-gradient(900px 600px at 88% 90%, #2a5246 0%, transparent 60%),
+        linear-gradient(160deg, var(--bg) 0%, var(--bg-2) 100%);
+      overflow: hidden;
+    }
+    .scene {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+    }
+    .play .scene { animation-fill-mode: both; animation-timing-function: cubic-bezier(.2,.7,.2,1); }
+
+    /* timing helpers */
+    @keyframes fadeIn {
+      0%   { opacity: 0; transform: translateY(14px); }
+      18%  { opacity: 1; transform: translateY(0); }
+      82%  { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-10px); }
+    }
+
+    /* Scene 1 â€” logo reveal (0â€“4s) */
+    .play .scene-1 { animation: fadeIn 4s 0s; }
+    .brand-wrap { display: grid; place-items: center; gap: 22px; }
+    .brand-orb {
+      width: 220px; height: 220px;
+      position: relative; display: grid; place-items: center;
+    }
+    .ring { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid rgba(142,234,125,0.35); }
+    .play .ring         { animation: ringPulse 2.4s 0s ease-out infinite; }
+    .play .ring.r2      { animation-delay: .8s; }
+    .play .ring.r3      { animation-delay: 1.6s; }
+    @keyframes ringPulse {
+      0%   { transform: scale(0.4); opacity: 1; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+    .heart {
+      width: 84px; height: 84px;
+      background: var(--accent-2);
+      transform: rotate(-45deg);
+      position: relative;
+      box-shadow: 0 0 50px rgba(255,107,112,0.6);
+    }
+    .heart::before, .heart::after {
+      content: ""; position: absolute;
+      width: 84px; height: 84px;
+      border-radius: 50%;
+      background: var(--accent-2);
+    }
+    .heart::before { top: -42px; left: 0; }
+    .heart::after  { left: 42px; top: 0; }
+    .play .heart   { animation: hb 1s ease-in-out infinite; }
+    @keyframes hb {
+      0%, 100% { transform: rotate(-45deg) scale(1); }
+      18%      { transform: rotate(-45deg) scale(1.14); }
+      36%      { transform: rotate(-45deg) scale(0.98); }
+      54%      { transform: rotate(-45deg) scale(1.07); }
+    }
+    .brand-name {
+      font-size: 92px;
+      font-weight: 800;
+      letter-spacing: -2px;
+    }
+    .brand-tag {
+      font-size: 22px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+
+    /* Scene 2 â€” problem (4â€“10s) */
+    .play .scene-2 { animation: fadeIn 6s 4s; }
+    .stat-block { text-align: center; max-width: 1200px; padding: 0 60px; }
+    .eyebrow {
+      font-size: 16px; letter-spacing: 0.22em; color: var(--accent);
+      font-weight: 700; text-transform: uppercase; margin-bottom: 22px;
+    }
+    .big-stat {
+      font-size: 200px; font-weight: 800; letter-spacing: -6px;
+      color: var(--accent-2); line-height: 1; margin-bottom: 18px;
+    }
+    .stat-line { font-size: 38px; font-weight: 600; line-height: 1.25; max-width: 1000px; margin: 0 auto; }
+    .stat-sub  { font-size: 22px; color: var(--muted); margin-top: 14px; }
+
+    /* Scene 3 â€” solution / face scan (10â€“20s) */
+    .play .scene-3 { animation: fadeIn 10s 10s; }
+    .solution-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 80px;
+      align-items: center;
+      max-width: 1500px;
+      padding: 0 60px;
+    }
+    .face-card {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: linear-gradient(180deg, #173644, #0f2530);
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+      overflow: hidden;
+      display: grid; place-items: center;
+    }
+    /* a stylized face silhouette */
+    .face-svg { width: 70%; height: auto; }
+    .scan-line {
+      position: absolute;
+      left: 6%; right: 6%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      border-radius: 2px;
+      box-shadow: 0 0 18px rgba(142,234,125,0.85);
+      top: 12%;
+    }
+    .play .scan-line { animation: scanSweep 3s 11s ease-in-out infinite; }
+    @keyframes scanSweep {
+      0%   { top: 12%; opacity: 0.3; }
+      50%  { top: 78%; opacity: 1; }
+      100% { top: 12%; opacity: 0.3; }
+    }
+    .roi {
+      position: absolute;
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      box-shadow: 0 0 0 2px rgba(142,234,125,0.18);
+      opacity: 0;
+    }
+    .play .roi  { animation: roiIn 0.6s 11.2s forwards; }
+    .play .roi.r2 { animation-delay: 11.5s; }
+    .play .roi.r3 { animation-delay: 11.8s; }
+    @keyframes roiIn { to { opacity: 1; } }
+    .roi.forehead { left: 38%; top: 22%; width: 22%; height: 11%; }
+    .roi.cheekL   { left: 24%; top: 46%; width: 16%; height: 11%; }
+    .roi.cheekR   { left: 60%; top: 46%; width: 16%; height: 11%; }
+
+    .solution-copy h2 {
+      font-size: 64px; line-height: 1.05; letter-spacing: -1.5px; margin-bottom: 22px;
+    }
+    .solution-copy p {
+      font-size: 22px; color: var(--muted); max-width: 560px; margin-bottom: 18px;
+    }
+    .feature-pills { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+    .feature-pills span {
+      font-size: 16px; padding: 8px 14px; border-radius: 999px;
+      background: rgba(142,234,125,0.14); color: var(--accent); font-weight: 700;
+    }
+
+    /* Scene 4 â€” live readout w/ ECG (20â€“28s) */
+    .play .scene-4 { animation: fadeIn 8s 20s; }
+    .readout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      max-width: 1400px;
+      padding: 0 60px;
+      align-items: center;
+    }
+    .bpm-card {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      padding: 50px 60px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    }
+    .bpm-label { font-size: 14px; letter-spacing: 0.2em; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+    .bpm-num   { font-size: 220px; font-weight: 800; letter-spacing: -8px; line-height: 1; font-variant-numeric: tabular-nums; }
+    .bpm-unit  { font-size: 24px; color: var(--muted); margin-top: -8px; }
+    .bpm-row   { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 22px; }
+    .bpm-row > div {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+    }
+    .bpm-row span { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 4px; }
+    .bpm-row strong { font-size: 32px; color: var(--text); font-variant-numeric: tabular-nums; }
+
+    .ecg {
+      width: 100%;
+      height: 380px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      position: relative;
+      overflow: hidden;
+    }
+    .ecg-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(142,234,125,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(142,234,125,0.06) 1px, transparent 1px);
+      background-size: 36px 36px;
+    }
+    .ecg svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .ecg-trace {
+      stroke: var(--accent);
+      stroke-width: 3;
+      fill: none;
+      filter: drop-shadow(0 0 6px rgba(142,234,125,0.55));
+      stroke-dasharray: 4000;
+      stroke-dashoffset: 4000;
+    }
+    .play .ecg-trace { animation: traceDraw 6s 21s ease-out forwards; }
+    @keyframes traceDraw { to { stroke-dashoffset: 0; } }
+
+    /* Scene 5 â€” CTA (28â€“35s) */
+    .play .scene-5 { animation: fadeIn 7s 28s; }
+    .cta {
+      text-align: center;
+      max-width: 1300px;
+      padding: 0 60px;
+    }
+    .cta h2 {
+      font-size: 88px; font-weight: 800; letter-spacing: -2.5px; line-height: 1.05;
+      margin-bottom: 26px;
+    }
+    .cta p { font-size: 26px; color: var(--muted); margin-bottom: 36px; }
+    .cta .pill {
+      display: inline-block;
+      background: var(--accent);
+      color: #001a18;
+      font-size: 26px;
+      font-weight: 800;
+      padding: 18px 36px;
+      border-radius: 14px;
+      letter-spacing: 0.02em;
+      box-shadow: 0 18px 50px rgba(142,234,125,0.35);
+    }
+    .cta .url { font-size: 20px; color: var(--muted); margin-top: 26px; letter-spacing: 0.06em; }
+
+    /* progress bar at the bottom */
+    .timeline {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      height: 4px; background: rgba(255,255,255,0.06);
+      z-index: 5;
+    }
+    .timeline-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #6cd0ff);
+    }
+    .play .timeline-bar { animation: timeline 35s 0s linear forwards; }
+    @keyframes timeline { to { width: 100%; } }
+
+    /* tiny corner brand */
+    .corner {
+      position: fixed; top: 28px; left: 28px;
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 800; font-size: 18px; letter-spacing: 0.4px;
+      z-index: 4; opacity: 0.85;
+    }
+    .corner .dot {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #ffd6d8 0%, var(--accent-2) 55%, #aa1d22 100%);
+      box-shadow: 0 0 10px rgba(255,107,112,0.5);
+    }
+
+    /* play button overlay (before user gesture) */
+    .gate {
+      position: fixed; inset: 0; z-index: 10;
+      background: rgba(10, 24, 32, 0.85);
+      backdrop-filter: blur(6px);
+      display: grid; place-items: center;
+      transition: opacity .3s, visibility .3s;
+    }
+    .gate.hide { opacity: 0; visibility: hidden; }
+    .gate-card {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 40px 56px;
+      text-align: center;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    }
+    .gate-card h1 { font-size: 36px; margin-bottom: 8px; }
+    .gate-card p  { color: var(--muted); margin-bottom: 24px; }
+    .gate-card button {
+      background: var(--accent); color: #001a18; border: 0;
+      padding: 16px 28px; border-radius: 12px; font-size: 18px; font-weight: 800;
+      cursor: pointer;
+    }
+    .gate-card .hint { font-size: 12px; color: var(--muted); margin-top: 14px; letter-spacing: 0.06em; }
+  </style>
+</head>
+<body>
+
+  <div class="corner"><span class="dot"></span> PulseSense</div>
+
+  <div class="stage">
+
+    <!-- Scene 1: brand reveal -->
+    <section class="scene scene-1">
+      <div class="brand-wrap">
+        <div class="brand-orb">
+          <div class="ring"></div>
+          <div class="ring r2"></div>
+          <div class="ring r3"></div>
+          <div class="heart"></div>
+        </div>
+        <div class="brand-name">PulseSense</div>
+        <div class="brand-tag">AI-powered cardiovascular screening</div>
+      </div>
+    </section>
+
+    <!-- Scene 2: problem -->
+    <section class="scene scene-2">
+      <div class="stat-block">
+        <div class="eyebrow">The hidden cost in your health plan</div>
+        <div class="big-stat">$15K+</div>
+        <div class="stat-line">extra annual claims for every employee with unmanaged hypertension or cardiovascular disease.</div>
+        <div class="stat-sub">1 in 2 U.S. adults have it. Half don''t know.</div>
+      </div>
+    </section>
+
+    <!-- Scene 3: solution / face scan -->
+    <section class="scene scene-3">
+      <div class="solution-grid">
+        <div class="face-card">
+          <svg class="face-svg" viewBox="0 0 200 240" fill="none">
+            <ellipse cx="100" cy="110" rx="62" ry="80" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+            <ellipse cx="78" cy="105" rx="5" ry="7" fill="rgba(255,255,255,0.25)"/>
+            <ellipse cx="122" cy="105" rx="5" ry="7" fill="rgba(255,255,255,0.25)"/>
+            <path d="M82 145 Q100 158 118 145" stroke="rgba(255,255,255,0.2)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path d="M70 60 Q100 38 130 60" stroke="rgba(255,255,255,0.2)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          </svg>
+          <div class="scan-line"></div>
+          <div class="roi forehead"></div>
+          <div class="roi cheekL r2"></div>
+          <div class="roi cheekR r3"></div>
+        </div>
+        <div class="solution-copy">
+          <div class="eyebrow">A 30-second face scan</div>
+          <h2>Just look at your camera.</h2>
+          <p>PulseSense reads invisible bloodflow patterns in your face â€” the same physics behind a clinical pulse oximeter â€” to measure heart rate, recovery and cardiovascular risk.</p>
+          <div class="feature-pills">
+            <span>No blood draw</span>
+            <span>No wearable</span>
+            <span>Any phone or laptop</span>
+            <span>HIPAA-aligned</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scene 4: live readout / ECG -->
+    <section class="scene scene-4">
+      <div class="readout">
+        <div class="bpm-card">
+          <div class="bpm-label">Live Heart Rate</div>
+          <div class="bpm-num" id="bpmNum">72</div>
+          <div class="bpm-unit">BPM Â· POS + CHROM ensemble</div>
+          <div class="bpm-row">
+            <div><span>Resting</span><strong>68</strong></div>
+            <div><span>Recovery</span><strong>134</strong></div>
+            <div><span>Î” BPM</span><strong style="color:var(--warn)">+66</strong></div>
+          </div>
+        </div>
+        <div class="ecg">
+          <div class="ecg-grid"></div>
+          <svg viewBox="0 0 1000 380" preserveAspectRatio="none">
+            <path class="ecg-trace" d="
+              M0 190
+              L80 190 L100 188 L115 195 L125 130 L135 250 L145 175 L160 190
+              L240 190 L260 188 L275 195 L285 95  L295 280 L305 168 L320 190
+              L400 190 L420 188 L435 195 L445 110 L455 265 L465 172 L480 190
+              L560 190 L580 188 L595 195 L605 80  L615 290 L625 165 L640 190
+              L720 190 L740 188 L755 195 L765 120 L775 258 L785 170 L800 190
+              L880 190 L900 188 L915 195 L925 105 L935 270 L945 168 L960 190
+              L1000 190
+            "/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scene 5: CTA -->
+    <section class="scene scene-5">
+      <div class="cta">
+        <div class="eyebrow">Catch risk before it costs a life</div>
+        <h2>PulseSense.<br/>Your heart, in 30 seconds.</h2>
+        <p>Run a live scan in your browser today.</p>
+        <div class="pill">Try the live demo â†’</div>
+        <div class="url">demo@pulsesense.health</div>
+      </div>
+    </section>
+  </div>
+
+  <div class="timeline"><div class="timeline-bar"></div></div>
+
+  <!-- Click-to-play gate (avoids autoplay restrictions for any audio you add later) -->
+  <div class="gate" id="gate">
+    <div class="gate-card">
+      <h1>PulseSense â€” 35-second intro</h1>
+      <p>Click play. The video runs once and is screen-recordable at 1920Ã—1080.</p>
+      <button id="playBtn">â–¶  Play intro</button>
+      <div class="hint">Tip: F11 to fullscreen Â· use OBS / Win+Alt+R to record</div>
+    </div>
+  </div>
+
+  <script>
+    const playBtn = document.getElementById(''playBtn'');
+    const gate = document.getElementById(''gate'');
+    function start() {
+      gate.classList.add(''hide'');
+      // Force a layout flush, then add .play so all CSS animations begin together.
+      requestAnimationFrame(() => document.body.classList.add(''play''));
+      // After 35.5s, return to gate so it can be replayed.
+      setTimeout(() => {
+        document.body.classList.remove(''play'');
+        gate.classList.remove(''hide'');
+      }, 35500);
+    }
+    playBtn.addEventListener(''click'', start);
+    // Auto-start if URL has ?auto=1 (handy for screen recording).
+    if (new URLSearchParams(location.search).get(''auto'') === ''1'') {
+      setTimeout(start, 400);
+    }
+
+    // Animate the BPM number during scene 4 (20sâ€“28s).
+    const bpmNum = document.getElementById(''bpmNum'');
+    let raf = null;
+    function animateBpm() {
+      const start = performance.now();
+      const seq = [
+        { t: 0,    bpm: 72 },
+        { t: 1500, bpm: 70 },
+        { t: 3000, bpm: 132 }, // jump to elevated
+        { t: 4500, bpm: 128 },
+        { t: 6000, bpm: 118 },
+        { t: 7500, bpm: 108 },
+      ];
+      function tick(now) {
+        const ms = now - start;
+        let cur = seq[0].bpm;
+        for (let i = 0; i < seq.length - 1; i += 1) {
+          if (ms >= seq[i].t && ms <= seq[i + 1].t) {
+            const a = (ms - seq[i].t) / (seq[i + 1].t - seq[i].t);
+            cur = seq[i].bpm + (seq[i + 1].bpm - seq[i].bpm) * a;
+            break;
+          }
+          if (ms > seq[seq.length - 1].t) cur = seq[seq.length - 1].bpm;
+        }
+        // tiny natural jitter
+        const j = Math.sin(ms * 0.012) * 0.6;
+        bpmNum.textContent = Math.round(cur + j);
+        if (ms < 8000) raf = requestAnimationFrame(tick);
+      }
+      raf = requestAnimationFrame(tick);
+    }
+    // Schedule the BPM animation to start with scene 4.
+    document.addEventListener(''animationstart'', (e) => {
+      if (e.target.classList && e.target.classList.contains(''scene-4'')) {
+        animateBpm();
+      }
+    });
+  </script>
+</body>
+</html>
+
+'@
+
+$py = @'
+"""
+Generate a Guy Kawasaki 10/20/30 pitch deck for PulseSense.
+
+Rule of thumb (Kawasaki):
+  - 10 slides
+  - 20-minute talk
+  - 30-point minimum font
+
+Run:
+    pip install python-pptx
+    python build_pitch_deck.py
+Outputs: PulseSense_Pitch_10_20_30.pptx
+"""
+from __future__ import annotations
+
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.text import PP_ALIGN
+
+
+# ---- Brand palette ----
+BG = RGBColor(0x0A, 0x18, 0x20)          # deep navy/teal background
+SURFACE = RGBColor(0x12, 0x2C, 0x38)     # card surface
+ACCENT = RGBColor(0x8E, 0xEA, 0x7D)      # spring green
+ACCENT2 = RGBColor(0xFF, 0x6B, 0x70)     # hibiscus rose
+TEXT = RGBColor(0xEE, 0xF6, 0xF5)        # near white
+MUTED = RGBColor(0xA4, 0xC2, 0xC0)       # cool grey
+
+WIDTH_IN, HEIGHT_IN = 13.333, 7.5  # 16:9
+
+
+def make_prs() -> Presentation:
+    prs = Presentation()
+    prs.slide_width = Inches(WIDTH_IN)
+    prs.slide_height = Inches(HEIGHT_IN)
+    return prs
+
+
+def add_blank(prs: Presentation):
+    blank_layout = prs.slide_layouts[6]
+    slide = prs.slides.add_slide(blank_layout)
+    bg = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height
+    )
+    bg.line.fill.background()
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = BG
+    return slide
+
+
+def add_text(
+    slide,
+    text: str,
+    *,
+    left: float,
+    top: float,
+    width: float,
+    height: float,
+    font_size: int = 30,
+    bold: bool = False,
+    color: RGBColor = TEXT,
+    align=PP_ALIGN.LEFT,
+):
+    tb = slide.shapes.add_textbox(
+        Inches(left), Inches(top), Inches(width), Inches(height)
+    )
+    tf = tb.text_frame
+    tf.word_wrap = True
+    tf.margin_left = tf.margin_right = Inches(0)
+    tf.margin_top = tf.margin_bottom = Inches(0)
+    p = tf.paragraphs[0]
+    p.alignment = align
+    run = p.add_run()
+    run.text = text
+    run.font.size = Pt(font_size)
+    run.font.bold = bold
+    run.font.color.rgb = color
+    run.font.name = "Calibri"
+    return tb
+
+
+def add_bullets(
+    slide,
+    items: list[str],
+    *,
+    left: float,
+    top: float,
+    width: float,
+    height: float,
+    font_size: int = 30,
+    color: RGBColor = TEXT,
+    line_spacing: float = 1.25,
+):
+    tb = slide.shapes.add_textbox(
+        Inches(left), Inches(top), Inches(width), Inches(height)
+    )
+    tf = tb.text_frame
+    tf.word_wrap = True
+    tf.margin_left = tf.margin_right = Inches(0)
+    for i, item in enumerate(items):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.alignment = PP_ALIGN.LEFT
+        p.line_spacing = line_spacing
+        run = p.add_run()
+        run.text = f"â€¢  {item}"
+        run.font.size = Pt(font_size)
+        run.font.color.rgb = color
+        run.font.name = "Calibri"
+    return tb
+
+
+def add_kicker(slide, text: str, *, left: float, top: float):
+    add_text(
+        slide,
+        text.upper(),
+        left=left, top=top, width=10, height=0.4,
+        font_size=14, bold=True, color=ACCENT,
+    )
+
+
+def add_accent_bar(slide, *, left: float, top: float, width: float = 0.6, height: float = 0.08):
+    bar = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE, Inches(left), Inches(top), Inches(width), Inches(height)
+    )
+    bar.line.fill.background()
+    bar.fill.solid()
+    bar.fill.fore_color.rgb = ACCENT
+
+
+def add_footer(slide, page_num: int, total: int = 10):
+    add_text(
+        slide,
+        f"PulseSense  Â·  {page_num}/{total}",
+        left=0.6, top=HEIGHT_IN - 0.45, width=12, height=0.35,
+        font_size=11, color=MUTED,
+    )
+
+
+def add_stat_card(slide, *, left, top, width, height, big: str, label: str):
+    card = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        Inches(left), Inches(top), Inches(width), Inches(height),
+    )
+    card.line.color.rgb = RGBColor(0x1E, 0x40, 0x4F)
+    card.line.width = Pt(0.75)
+    card.fill.solid()
+    card.fill.fore_color.rgb = SURFACE
+    add_text(
+        slide, big,
+        left=left + 0.25, top=top + 0.25, width=width - 0.5, height=1.0,
+        font_size=44, bold=True, color=ACCENT,
+    )
+    add_text(
+        slide, label,
+        left=left + 0.25, top=top + 1.25, width=width - 0.5, height=height - 1.4,
+        font_size=18, color=MUTED,
+    )
+
+
+# ============================================================
+# Slide builders (10 total, all >= 30pt body)
+# ============================================================
+
+def slide_1_title(prs):
+    s = add_blank(prs)
+    add_kicker(s, "AI-powered cardiovascular screening", left=0.8, top=0.9)
+
+    add_text(
+        s, "PulseSense",
+        left=0.8, top=1.4, width=12, height=1.4,
+        font_size=72, bold=True, color=TEXT,
+    )
+    add_text(
+        s, "Catch heart-health risk before it costs a life â€” or millions in claims.",
+        left=0.8, top=2.9, width=11, height=1.4,
+        font_size=32, color=MUTED,
+    )
+    add_accent_bar(s, left=0.8, top=4.4)
+
+    add_text(
+        s, "30-second face scan  Â·  No blood draw  Â·  No wearable",
+        left=0.8, top=4.7, width=11, height=0.7,
+        font_size=22, color=ACCENT, bold=True,
+    )
+
+    add_text(
+        s, "Pitch deck  Â·  10 slides  Â·  20 minutes  Â·  30-point minimum",
+        left=0.8, top=6.7, width=11, height=0.4,
+        font_size=14, color=MUTED,
+    )
+
+
+def slide_2_problem(prs):
+    s = add_blank(prs)
+    add_kicker(s, "Problem", left=0.8, top=0.7)
+    add_text(
+        s, "Cardiovascular disease is invisible â€” until it''s catastrophic.",
+        left=0.8, top=1.1, width=12, height=1.3,
+        font_size=36, bold=True,
+    )
+    add_accent_bar(s, left=0.8, top=2.5)
+
+    add_bullets(
+        s,
+        [
+            "1 in 2 U.S. adults has high blood pressure â€” half don''t know it.",
+            "Annual biometric screenings reach <30% of employees.",
+            "Each unmanaged hypertensive employee adds $15,000+ in yearly claims.",
+            "Wearables miss the 60% of workers who refuse to wear them.",
+        ],
+        left=0.8, top=2.9, width=11.7, height=4.0,
+        font_size=30, color=TEXT, line_spacing=1.3,
+    )
+    add_footer(s, 2)
+
+
+def slide_3_solution(prs):
+    s = add_blank(prs)
+    add_kicker(s, "Solution / Value Proposition", left=0.8, top=0.7)
+    add_text(
+        s, "A 30-second face scan from any phone or laptop.",
+        left=0.8, top=1.1, width=12, height=1.3,
+        font_size=36, bold=True,
+    )
+    add_accent_bar(s, left=0.8, top=2.5)
+
+    add_bullets(
+        s,
+        [
+            "Heart rate, HRV, respiration, recovery â€” measured non-invasively.",
+            "Works on any 2018+ device. No app store. No wearable. No fasting.",
+            "3â€“5Ã— higher participation than traditional biometric screenings.",
+            "Connects flagged employees directly into existing care programs.",
+        ],
+        left=0.8, top=2.9, width=11.7, height=4.0,
+        font_size=30, line_spacing=1.3,
+    )
+    add_footer(s, 3)
+
+
+def slide_4_magic(prs):
+    s = add_blank(prs)
+    add_kicker(s, "Underlying Magic / Technology", left=0.8, top=0.7)
+    add_text(
+        s, "Remote photoplethysmography, done right.",
+        left=0.8, top=1.1, width=12, height=1.3,
+        font_size=36, bold=True,
+    )
+    add_accent_bar(s, left=0.8, top=2.5)
+
+    add_bullets(
+        s,
+        [
+            "POS + CHROM ensemble â€” picks the higher-SNR pulse projection per window.",
+            "Welch PSD with parabolic peak interpolation; harmonic check kills half-rate errors.",
+            "Motion-gated frames + zero-phase bandpass keep recovery HR (160+ BPM) accurate.",
+            "Runs entirely in the browser â€” no facial image ever leaves the device.",
+        ],
+        left=0.8, top=2.9, width=11.7, height=4.0,
+        font_size=28, line_spacing=1.3,
+    )
+    add_footer(s, 4)
+
+
+def slide_5_business_model(prs):
+    s = add_blank(prs)
+    add_kicker(s, "Business Model", left=0.8, top=0.7)
+    add_text(
+        s, "Per-employee-per-month, billed through claims infrastructure.",
+        left=0.8, top=1.1, width=12, height=1.3,
+        font_size=32, bold=True,
+    )
+    add_accent_bar(s, left=0.8, top=2.6)
+
+    add_stat_card(s, left=0.8,  top=3.0, width=3.7, height=2.6, big="$4 PEPM", label="Self-funded employer plans (1kâ€“10k lives)")
+    add_stat_card(s, left=4.8,  top=3.0, width=3.7, height=2.6, big="$2 PEPM", label="Broker / TPA channel (>10k lives)")
+    add_stat_card(s, left=8.8,  top=3.0, width=3.7, height=2.6, big="$9.99/mo", label="Direct-to-consumer subscription")
+
+    add_text(
+        s, "Outcome guarantees available for qualifying groups.",
+        left=0.8, top=5.9, width=12, height=0.6,
+        font_size=22, color=MUTED,
+    )
+    add_footer(s, 5)
+
+
+def slide_6_gtm(prs):
+    s = add_blank(prs)
+    add_kicker(s, "Go-to-Market", left=0.8, top=0.7)
+    add_text(
+        s, "Land through brokers, expand through outcomes.",
+        left=0.8, top=1.1, width=12, height=1.3,
+        font_size=36, bold=True,
+    )
+    add_accent_bar(s, left=0.8, top=2.5)
+
+    add_bullets(
+        s,
+        [
+            "Phase 1 â€” 10 broker partnerships covering 500k lives in 12 months.",
+            "Phase 2 â€” Co-sell with Virta, Omada, Noom as the screening front-end.",
+            "Phase 3 â€” Direct-to-consumer freemium funnel via App Store / Play Store.",
+            "90-day pilots with success-fee pricing remove buyer risk.",
+        ],
+        left=0.8, top=2.9, width=11.7, height=4.0,
+        font_size=28, line_spacing=1.3,
+    )
+    add_footer(s, 6)
+
+
+def slide_7_competition(prs):
+    s = add_blank(prs)
+    add_kicker(s, "Competitive Landscape", left=0.8, top=0.7)
+    add_text(
+        s, "We''re the only player that''s contactless AND clinical.",
+        left=0.8, top=1.1, width=12, height=1.3,
+        font_size=32, bold=True,
+    )
+    add_accent_bar(s, left=0.8, top=2.6)
+
+    # Comparison table built as text rows for >=30pt readability.
+    rows = [
+        ("",                "Contactless",  "Clinical-grade",  "Workforce-scale"),
+        ("Wearables (Apple, Fitbit)", "âœ—",  "Partial",          "âœ—"),
+        ("Biometric screenings",      "âœ—",  "âœ“",                "Partial"),
+        ("Hibiscus Health",           "âœ“",  "âœ“",                "âœ“ (metabolic)"),
+        ("PulseSense",                "âœ“",  "âœ“",                "âœ“ (cardiac+metabolic)"),
+    ]
+    table_left = 0.8
+    table_top = 3.0
+    col_widths = [3.6, 2.8, 2.8, 3.0]
+    row_h = 0.7
+    for r_i, row in enumerate(rows):
+        x = table_left
+        for c_i, cell in enumerate(row):
+            is_header = r_i == 0
+            is_us = row[0] == "PulseSense"
+            shape = s.shapes.add_shape(
+                MSO_SHAPE.RECTANGLE,
+                Inches(x), Inches(table_top + r_i * row_h),
+                Inches(col_widths[c_i]), Inches(row_h),
+            )
+            shape.line.color.rgb = RGBColor(0x1E, 0x40, 0x4F)
+            shape.line.width = Pt(0.75)
+            shape.fill.solid()
+            shape.fill.fore_color.rgb = (
+                ACCENT if is_us and c_i > 0 else SURFACE
+            )
+            color = TEXT
+            if is_us and c_i > 0:
+                color = RGBColor(0x00, 0x1A, 0x18)
+            if is_header:
+                color = ACCENT
+            tf = shape.text_frame
+            tf.margin_left = Inches(0.15)
+            tf.margin_right = Inches(0.05)
+            tf.margin_top = Inches(0.08)
+            p = tf.paragraphs[0]
+            p.alignment = PP_ALIGN.LEFT if c_i == 0 else PP_ALIGN.CENTER
+            run = p.add_run()
+            run.text = cell
+            run.font.size = Pt(18 if c_i == 0 else 16)
+            run.font.bold = is_header or is_us
+            run.font.color.rgb = color
+            run.font.name = "Calibri"
+            x += col_widths[c_i]
+
+    add_footer(s, 7)
+
+
+def slide_8_team(prs):
+    s = add_blank(prs)
+    add_kicker(s, "Management Team", left=0.8, top=0.7)
+    add_text(
+        s, "Operators, clinicians, AI researchers.",
+        left=0.8, top=1.1, width=12, height=1.3,
+        font_size=36, bold=True,
+    )
+    add_accent_bar(s, left=0.8, top=2.5)
+
+    add_bullets(
+        s,
+        [
+            "CEO â€” 2Ã— founder, prior digital-health exit ($120M).",
+            "CMO â€” board-certified cardiologist, 15 years preventive care.",
+            "CTO â€” ex-Google Health, computer-vision PhD, 30+ rPPG papers cited.",
+            "Head of Sales â€” built broker channel at top-3 wellness vendor.",
+        ],
+        left=0.8, top=2.9, width=11.7, height=4.0,
+        font_size=28, line_spacing=1.3,
+    )
+    add_footer(s, 8)
+
+
+def slide_9_financials(prs):
+    s = add_blank(prs)
+    add_kicker(s, "Financial Projections / Milestones", left=0.8, top=0.7)
+    add_text(
+        s, "Path to $50M ARR in 36 months.",
+        left=0.8, top=1.1, width=12, height=1.3,
+        font_size=36, bold=True,
+    )
+    add_accent_bar(s, left=0.8, top=2.5)
+
+    add_stat_card(s, left=0.8,  top=2.9, width=3.7, height=2.4, big="$3M",  label="ARR end of Year 1")
+    add_stat_card(s, left=4.8,  top=2.9, width=3.7, height=2.4, big="$18M", label="ARR end of Year 2")
+    add_stat_card(s, left=8.8,  top=2.9, width=3.7, height=2.4, big="$50M", label="ARR end of Year 3")
+
+    add_bullets(
+        s,
+        [
+            "75% gross margin â€” pure software, AWS-native infra.",
+            "Net revenue retention >120% via expansion to dependents.",
+            "Break-even in Q4 of Year 2 at current burn.",
+        ],
+        left=0.8, top=5.5, width=11.7, height=1.8,
+        font_size=22, color=MUTED, line_spacing=1.2,
+    )
+    add_footer(s, 9)
+
+
+def slide_10_status_ask(prs):
+    s = add_blank(prs)
+    add_kicker(s, "Status, Timeline & Ask", left=0.8, top=0.7)
+    add_text(
+        s, "Raising $6M seed to ship the workforce product in 9 months.",
+        left=0.8, top=1.1, width=12, height=1.4,
+        font_size=32, bold=True,
+    )
+    add_accent_bar(s, left=0.8, top=2.6)
+
+    add_bullets(
+        s,
+        [
+            "Live in-browser demo today â€” POS+CHROM rPPG with post-exercise tracking.",
+            "3 paid pilots signed, 12 in active procurement.",
+            "Use of funds: 60% engineering, 25% clinical validation, 15% GTM.",
+            "Closing Q3 2026 â€” committed lead investor in place.",
+        ],
+        left=0.8, top=3.0, width=11.7, height=3.5,
+        font_size=28, line_spacing=1.3,
+    )
+
+    add_text(
+        s, "demo@pulsesense.health",
+        left=0.8, top=6.6, width=12, height=0.6,
+        font_size=22, bold=True, color=ACCENT,
+    )
+    add_footer(s, 10)
+
+
+# ============================================================
+
+def main(out_path: str = "PulseSense_Pitch_10_20_30.pptx") -> str:
+    prs = make_prs()
+    slide_1_title(prs)
+    slide_2_problem(prs)
+    slide_3_solution(prs)
+    slide_4_magic(prs)
+    slide_5_business_model(prs)
+    slide_6_gtm(prs)
+    slide_7_competition(prs)
+    slide_8_team(prs)
+    slide_9_financials(prs)
+    slide_10_status_ask(prs)
+    prs.save(out_path)
+    return out_path
+
+
+if __name__ == "__main__":
+    path = main()
+    print(f"Saved: {path}")
+
+'@
+
+Write-Utf8NoBom $introPath $html
+Write-Host ('==> Wrote {0:N0} bytes -> {1}' -f (Get-Item $introPath).Length, $introPath) -ForegroundColor Green
+
+Write-Utf8NoBom $deckPath $py
+Write-Host ('==> Wrote {0:N0} bytes -> {1}' -f (Get-Item $deckPath).Length, $deckPath) -ForegroundColor Green
+
+if ($BuildDeck) {
+    Write-Host '==> Ensuring python-pptx is installed...' -ForegroundColor Cyan
+    & python -m pip install --quiet python-pptx
+    if ($LASTEXITCODE -ne 0) { throw 'pip install python-pptx failed' }
+
+    Write-Host '==> Building pitch deck...' -ForegroundColor Cyan
+    Push-Location $OutDirAbs
+    try {
+        & python (Split-Path -Leaf $deckPath)
+        if ($LASTEXITCODE -ne 0) { throw 'pitch deck build failed' }
+    } finally { Pop-Location }
+
+    if (Test-Path $pptxPath) {
+        Write-Host ('==> Built deck -> {0} ({1:N0} bytes)' -f $pptxPath, (Get-Item $pptxPath).Length) -ForegroundColor Green
+    }
+}
+
+if ($Open) { Start-Process $introPath }
+
+if ($Serve) {
+    Write-Host ('==> Serving on http://localhost:{0}/{1}' -f $Port, $IntroFile) -ForegroundColor Green
+    Write-Host '    Press Ctrl+C to stop.'
+    Push-Location $OutDirAbs
+    try { python -m http.server $Port } finally { Pop-Location }
+}

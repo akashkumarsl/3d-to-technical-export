@@ -1,0 +1,248 @@
+{
+  "metadata": {
+    "title": "Exhibition Booth - Event Hall A",
+    "scale": "1:50",
+    "units": "meters",
+    "author": "3D-to-Technical Export"
+  },
+  "walls": [
+    {
+      "id": "wall_back",
+      "label": "Back Wall",
+      "start": [0, 0, 0],
+      "end": [10, 0, 0],
+      "height": 3.5,
+      "thickness": 0.15
+    },
+    {
+      "id": "wall_left",
+      "label": "Left Wall",
+      "start": [0, 0, 0],
+      "end": [0, 6, 0],
+      "height": 3.5,
+      "thickness": 0.15
+    },
+    {
+      "id": "wall_right",
+      "label": "Right Wall",
+      "start": [10, 0, 0],
+      "end": [10, 6, 0],
+      "height": 3.5,
+      "thickness": 0.15
+    },
+    {
+      "id": "wall_front_left",
+      "label": "Front Left Partition",
+      "start": [0, 6, 0],
+      "end": [3, 6, 0],
+      "height": 2.5,
+      "thickness": 0.10
+    },
+    {
+      "id": "wall_front_right",
+      "label": "Front Right Partition",
+      "start": [7, 6, 0],
+      "end": [10, 6, 0],
+      "height": 2.5,
+      "thickness": 0.10
+    },
+    {
+      "id": "wall_inner",
+      "label": "Inner Divider",
+      "start": [5, 0, 0],
+      "end": [5, 3, 0],
+      "height": 2.8,
+      "thickness": 0.10
+    }
+  ],
+  "floors": [
+    {
+      "id": "floor_main",
+      "label": "Main Floor",
+      "corners": [[0, 0, 0], [10, 0, 0], [10, 6, 0], [0, 6, 0]]
+    }
+  ],
+  "doors": [
+    {
+      "id": "door_entrance",
+      "label": "Main Entrance",
+      "position": [5, 6, 0],
+      "width": 4.0,
+      "height": 2.4,
+      "swing": "inward"
+    }
+  ],
+  "lighting": {
+    "track_spotlights": [
+      {
+        "id": "spot_1",
+        "label": "Track Spotlight A",
+        "position": [2.5, 1.5, 3.2],
+        "target": [2.5, 1.5, 0],
+        "wattage": 35
+      },
+      {
+        "id": "spot_2",
+        "label": "Track Spotlight B",
+        "position": [7.5, 1.5, 3.2],
+        "target": [7.5, 1.5, 0],
+        "wattage": 35
+      },
+      {
+        "id": "spot_3",
+        "label": "Track Spotlight C",
+        "position": [5.0, 3.0, 3.2],
+        "target": [5.0, 3.0, 0],
+        "wattage": 50
+      },
+      {
+        "id": "spot_4",
+        "label": "Track Spotlight D",
+        "position": [2.5, 4.5, 3.2],
+        "target": [2.5, 4.5, 0],
+        "wattage": 35
+      },
+      {
+        "id": "spot_5",
+        "label": "Track Spotlight E",
+        "position": [7.5, 4.5, 3.2],
+        "target": [7.5, 4.5, 0],
+        "wattage": 35
+      }
+    ],
+    "led_strips": [
+      {
+        "id": "led_1",
+        "label": "LED Strip Back Wall",
+        "start": [0.5, 0.05, 3.0],
+        "end": [9.5, 0.05, 3.0],
+        "color": "warm_white"
+      },
+      {
+        "id": "led_2",
+        "label": "LED Strip Left Wall",
+        "start": [0.05, 0.5, 3.0],
+        "end": [0.05, 5.5, 3.0],
+        "color": "warm_white"
+      }
+    ]
+  },
+  "rigging": {
+    "truss_segments": [
+      {
+        "id": "truss_1",
+        "label": "Main Truss A",
+        "start": [1.0, 1.0, 3.4],
+        "end": [9.0, 1.0, 3.4],
+        "profile": "box_300"
+      },
+      {
+        "id": "truss_2",
+        "label": "Main Truss B",
+        "start": [1.0, 5.0, 3.4],
+        "end": [9.0, 5.0, 3.4],
+        "profile": "box_300"
+      },
+      {
+        "id": "truss_3",
+        "label": "Cross Truss",
+        "start": [5.0, 1.0, 3.4],
+        "end": [5.0, 5.0, 3.4],
+        "profile": "box_200"
+      }
+    ]
+  },
+  "furniture": [
+    {
+      "id": "table_1",
+      "type": "table",
+      "label": "Reception Table",
+      "position": [2.5, 4.0, 0],
+      "size": [1.8, 0.8, 0.75],
+      "rotation": 0
+    },
+    {
+      "id": "table_2",
+      "type": "table",
+      "label": "Display Table",
+      "position": [7.5, 2.0, 0],
+      "size": [2.0, 1.0, 0.75],
+      "rotation": 0
+    },
+    {
+      "id": "chair_1",
+      "type": "chair",
+      "label": "Chair A",
+      "position": [2.0, 3.2, 0],
+      "size": [0.5, 0.5, 0.9],
+      "rotation": 0
+    },
+    {
+      "id": "chair_2",
+      "type": "chair",
+      "label": "Chair B",
+      "position": [3.0, 3.2, 0],
+      "size": [0.5, 0.5, 0.9],
+      "rotation": 0
+    },
+    {
+      "id": "chair_3",
+      "type": "chair",
+      "label": "Chair C",
+      "position": [2.0, 4.8, 0],
+      "size": [0.5, 0.5, 0.9],
+      "rotation": 180
+    },
+    {
+      "id": "chair_4",
+      "type": "chair",
+      "label": "Chair D",
+      "position": [3.0, 4.8, 0],
+      "size": [0.5, 0.5, 0.9],
+      "rotation": 180
+    }
+  ],
+  "assets": [
+    {
+      "id": "lightbox_1",
+      "type": "lightbox",
+      "label": "Lightbox Display A",
+      "position": [1.5, 0.3, 0],
+      "size": [2.0, 0.15, 2.5],
+      "rotation": 0,
+      "content": "Brand Logo"
+    },
+    {
+      "id": "lightbox_2",
+      "type": "lightbox",
+      "label": "Lightbox Display B",
+      "position": [6.5, 0.3, 0],
+      "size": [2.5, 0.15, 2.5],
+      "rotation": 0,
+      "content": "Product Info"
+    },
+    {
+      "id": "neon_sign",
+      "type": "neon_sign",
+      "label": "Neon Sign",
+      "position": [4.0, 0.1, 2.0],
+      "size": [2.0, 0.05, 0.6],
+      "rotation": 0,
+      "content": "TIDES MARINE"
+    },
+    {
+      "id": "socket_1",
+      "type": "socket",
+      "label": "Power Socket A",
+      "position": [0.1, 2.0, 0.3],
+      "size": [0.08, 0.04, 0.08]
+    },
+    {
+      "id": "socket_2",
+      "type": "socket",
+      "label": "Power Socket B",
+      "position": [9.9, 2.0, 0.3],
+      "size": [0.08, 0.04, 0.08]
+    }
+  ]
+}
